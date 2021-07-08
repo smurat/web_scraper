@@ -18,7 +18,8 @@ import 'dart:async';
 
 import 'package:html/dom.dart';
 import 'package:html/parser.dart'; // Contains HTML parsers to generate a Document object.
-import 'package:http/http.dart'; // Contains a client for making API calls.
+// import 'package:http/http.dart'; // Contains a client for making API calls.
+import 'package:dio/dio.dart';
 
 import 'src/validation.dart'; // Contains validation functions for URLs
 
@@ -33,6 +34,10 @@ class WebScraper {
   // Base url of the website to be scrapped.
   String? baseUrl;
 
+  Dio dio = Dio();
+
+  Response? response;
+
   /// Creates the web scraper instance.
   WebScraper([String? baseUrl]) {
     if (baseUrl != null) {
@@ -45,19 +50,23 @@ class WebScraper {
   }
 
   /// Loads the webpage into response object.
-  Future<bool> loadWebPage(String route) async {
+  Future<bool> loadWebPage(String route, {Interceptor? interceptor}) async {
     if (baseUrl != null && baseUrl != '') {
       final stopwatch = Stopwatch()..start();
-      var client = Client();
 
       try {
-        var _response = await client.get(Uri.parse(baseUrl! + route));
         // Calculating Time Elapsed using timer from dart:core.
+        if (interceptor != null) {
+          dio.interceptors.add(interceptor);
+          print('interceptor added');
+        }
+        response = await dio.get(baseUrl! + route);
+
         timeElaspsed = stopwatch.elapsed.inMilliseconds;
         stopwatch.stop();
         stopwatch.reset();
         // Parses the response body once it's retrieved to be used on the other methods.
-        _document = parse(_response.body);
+        _document = parse(response!.data);
       } catch (e) {
         throw WebScraperException(e.toString());
       }
@@ -68,13 +77,16 @@ class WebScraper {
 
   /// Loads the webpage URL into response object without requiring the two-step process of base + route.
   /// Unlike the the two-step process, the URL is NOT validated before being requested.
-  Future<bool> loadFullURL(String page) async {
-    var client = Client();
+  Future<bool> loadFullURL(String page, {Interceptor? interceptor}) async {
     try {
-      var _response = await client.get(Uri.parse(page));
       // Calculating Time Elapsed using timer from dart:core.
       // Parses the response body once it's retrieved to be used on the other methods.
-      _document = parse(_response.body);
+      if (interceptor != null) {
+        dio.interceptors.add(interceptor);
+        print('interceptor added');
+      }
+      response = await dio.get(page);
+      _document = parse(response!.data);
     } catch (e) {
       throw WebScraperException(e.toString());
     }
